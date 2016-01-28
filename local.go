@@ -20,13 +20,17 @@ func (l localDone) Wait(timeout int64) {
 	}
 }
 
-type localStateTransition chan State
+type localState struct {
+	Context context.Context
+	State   State
+}
+type localStateTransition chan localState
 
-func (ls localStateTransition) Next(state State) {
-	ls <- state
+func (ls localStateTransition) Next(ctx context.Context, state State) {
+	ls <- localState{ctx, state}
 }
 
-func (ls localStateTransition) Fork(ctx context.Context, states ...State) Joiner {
+func (ls localStateTransition) Fork(ctx context.Context, states ...State) Done {
 	var wg sync.WaitGroup
 	wg.Add(len(states))
 
@@ -60,15 +64,16 @@ type localMachine struct {
 	transitioner localStateTransition
 }
 
-func (lm *localMachine) Run(ctx context.Context, state State) Joiner {
+func (lm *localMachine) Run(ctx context.Context, initialState State) Done {
 	go func() {
+		var localState localState
 		ok := true
 
 		for ok {
 			select {
-			case state, ok = <-lm.transitioner:
+			case localState, ok = <-lm.transitioner:
 				if ok {
-					state(ctx, lm.transitioner)
+					localState.State(localState.Context, lm.transitioner)
 				}
 			case _, ok = <-ctx.Done():
 			}
@@ -77,7 +82,7 @@ func (lm *localMachine) Run(ctx context.Context, state State) Joiner {
 		defer close(lm.done)
 	}()
 
-	state(ctx, lm.transitioner)
+	initialState(ctx, lm.transitioner)
 
 	return lm.done
 }
@@ -87,6 +92,6 @@ func (lm *localMachine) Run(ctx context.Context, state State) Joiner {
 func NewLocalMachine() Machine {
 	return &localMachine{
 		done:         make(chan struct{}),
-		transitioner: make(chan State, 1),
+		transitioner: make(chan localState, 1),
 	}
 }
