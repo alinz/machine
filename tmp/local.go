@@ -1,4 +1,4 @@
-package machine
+package Machine
 
 import (
 	"sync"
@@ -42,7 +42,7 @@ func (ls localStateTransition) Fork(ctx context.Context, states ...State) Done {
 			defer wg.Done()
 
 			NewLocalMachine().
-				Run(ctx, initialState).
+				RunStateMachine(ctx, initialState).
 				Wait(0)
 		}(state)
 	}
@@ -64,7 +64,7 @@ type localMachine struct {
 	transitioner localStateTransition
 }
 
-func (lm *localMachine) Run(ctx context.Context, initialState State) Done {
+func (lm *localMachine) RunStateMachine(ctx context.Context, initialState State) Done {
 	go func() {
 		var localState localState
 		ok := true
@@ -87,7 +87,7 @@ func (lm *localMachine) Run(ctx context.Context, initialState State) Done {
 	return lm.done
 }
 
-//NewLocalMachine is a simple implemenation of state machine which uses go
+//NewLocalMachine is a simple implemenation of state Machine which uses go
 //channel
 func NewLocalMachine() Machine {
 	return &localMachine{
