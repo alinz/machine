@@ -9,4 +9,9 @@ type State func(Runtime)
 type Runtime interface {
 	NextState(context.Context, State)
 	Context() context.Context
+	Fork(context.Context, ...State) []Runtime
+}
+
+func Join(runtimes []Runtime) {
+
 }
