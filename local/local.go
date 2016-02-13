@@ -42,11 +42,14 @@ func (l *localRuntime) loop(start machine.State) {
 		var localItem *item
 		ok := true
 
+		rootCtx := l.ctx
+
 		for ok {
 			select {
 			case localItem, ok = <-l.local:
 				if ok {
 					if localItem.state != nil {
+						l.ctx = localItem.ctx
 						localItem.state(l)
 					} else {
 						//we are going to cancel if state sends a nil state as a next state
@@ -54,7 +57,7 @@ func (l *localRuntime) loop(start machine.State) {
 						cancel()
 					}
 				}
-			case _, ok = <-l.ctx.Done():
+			case _, ok = <-rootCtx.Done():
 			}
 		}
 

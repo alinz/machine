@@ -42,6 +42,38 @@ func TestRuntime(t *testing.T) {
 	}
 }
 
+func TestPassingContext(t *testing.T) {
+	var state1, state2, state3 machine.State
+
+	var result int
+
+	state1 = func(runtime machine.Runtime) {
+		first := 1
+		ctx := context.WithValue(runtime.Context(), "first", first)
+		runtime.NextState(ctx, state2)
+	}
+
+	state2 = func(runtime machine.Runtime) {
+		first := runtime.Context().Value("first").(int)
+		ctx := context.WithValue(runtime.Context(), "second", first+1)
+		runtime.NextState(ctx, state3)
+	}
+
+	state3 = func(runtime machine.Runtime) {
+		second := runtime.Context().Value("second").(int)
+		result = second + 1
+		runtime.NextState(runtime.Context(), nil)
+	}
+
+	runtime := local.Runtime(context.Background(), state1)
+
+	<-runtime.Context().Done()
+
+	if result != 3 {
+		t.Errorf("expected %d, but got %d", 3, result)
+	}
+}
+
 func TestRuntimeComplex(t *testing.T) {
 	var state1, state2 machine.State
 
@@ -77,7 +109,3 @@ func TestRuntimeComplex(t *testing.T) {
 		Context().
 		Done()
 }
-
-//
-//
-//
